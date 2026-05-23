@@ -1,6 +1,6 @@
 # Zerowriter Modular E-Ink Typewriter
 
-A clean, modular writing application for Raspberry Pi Zero and the Waveshare 4.2" (V2) E-Ink display. It captures direct hardware keyboard events, features automatic scroll rendering, includes a document manager, autosaves drafts, and syncs automatically to Google Drive in the background.
+A clean, modular writing application for Raspberry Pi Zero and the Waveshare 4.2" (V2) E-Ink display. It captures direct hardware keyboard events, features automatic scroll rendering, includes a document manager, autosaves drafts, and syncs exclusively in `.docx` format to Google Drive in the background.
 
 ---
 
@@ -8,13 +8,14 @@ A clean, modular writing application for Raspberry Pi Zero and the Waveshare 4.2
 
 ```
 ├── main.py                     # Entry point orchestrating the app loop
+├── deploy.sh                   # Automated pull, copy, and restart script
 ├── README.md                   # Installation & configuration guide
 └── zerowriter/
     ├── __init__.py
     ├── config.py               # Constants, paths, font sizes, and thresholds
     ├── display.py              # E-ink drivers and layout render functions
     ├── editor.py               # Business logic tracking active document text
-    ├── file_manager.py         # File load/save/autosave recovery mechanics
+    ├── file_manager.py         # File load/save/autosave recovery mechanics (.docx only)
     ├── keyboard.py             # Event hook mapping hardware keys to actions
     └── sync.py                 # Asynchronous background thread executing Rclone syncs
 ```
@@ -23,16 +24,31 @@ A clean, modular writing application for Raspberry Pi Zero and the Waveshare 4.2
 
 ## Installation on the Raspberry Pi
 
-### 1. Position the Files
-Copy the files from this directory to the examples folder of your Waveshare library on the Pi:
-* **Package directory:** `~/waveshare-python/e-Paper/RaspberryPi_JetsonNano/python/examples/zerowriter/`
-* **Entry point:** `~/waveshare-python/e-Paper/RaspberryPi_JetsonNano/python/examples/main.py`
-
-### 2. Install Dependencies
-Run these commands to install the event-handling library:
+### 1. Install Dependencies
+Run these commands to install event-handling, word document processing, and cloud sync tools:
 ```bash
 sudo apt update
-sudo apt install -y python3-evdev rclone
+sudo apt install -y python3-evdev python3-docx rclone
+```
+
+### 2. Position the Files & Deploy
+Clone the repository to your home folder on the Pi, make the deployment script executable, and run it:
+```bash
+# Clone the repository
+git clone https://github.com/RajveerRall/zerowriter.git ~/zerowriter
+
+# Move to directory and make script executable
+cd ~/zerowriter
+chmod +x deploy.sh
+
+# Run the deploy script to position all modules and entrypoints
+./deploy.sh
+```
+
+### How to update in the future:
+Whenever you make updates on your laptop and push them to GitHub, simply run this single command on your Pi to fetch, copy, and restart the typewriter program:
+```bash
+cd ~/zerowriter && ./deploy.sh
 ```
 
 ---
@@ -71,7 +87,7 @@ sudo python3 main.py
 ### Key Controls
 * **Menu Browsing:** Use the `Up/Down Arrow` keys, press `Enter` to open/create a file.
 * **Typing Mode:** Regular typing updates the screen automatically when you pause typing for more than `0.15` seconds.
-* **Ctrl + S:** Manually save the document and trigger an asynchronous background sync to Google Drive.
+* **Ctrl + S:** Manually save the document as `.docx` and trigger an asynchronous background sync to Google Drive.
 * **Ctrl + Q:** Save your progress, clean up temporary drafts, trigger a final background sync, and return to the main File Manager Menu.
 * **Ctrl + R:** Force a full screen refresh to clear any e-ink ghosting artifacts.
 
@@ -116,6 +132,7 @@ To configure your Pi to boot directly into the typewriter:
 4. Enable and start your service:
    ```bash
    sudo systemctl daemon-reload
+   sudo systemctl enable zerowriter.service
    ```
 
 5. Restart the Pi:
