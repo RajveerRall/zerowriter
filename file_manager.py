@@ -4,7 +4,8 @@ import time
 try:
     from docx import Document
     HAS_DOCX = True
-except ImportError:
+except ImportError as e:
+    print(f"DEBUG: docx import failed: {e}")
     HAS_DOCX = False
 
 class FileManager:
