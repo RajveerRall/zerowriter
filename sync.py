@@ -13,7 +13,16 @@ class SyncManager:
         def run():
             self.status = "syncing"
             try:
-                cmd = ["rclone", "sync", self.local_dir, "gdrive:Zerowriter", "--exclude", ".*"]
+                # Explicitly point to the user's rclone config since python runs as root (sudo)
+                config_path = "/home/user/.config/rclone/rclone.conf"
+                cmd = [
+                    "rclone", 
+                    "--config", config_path, 
+                    "sync", 
+                    self.local_dir, 
+                    "gdrive:Zerowriter", 
+                    "--exclude", ".*"
+                ]
                 result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 if result.returncode == 0:
                     self.status = "synced"
