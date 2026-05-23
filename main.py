@@ -172,8 +172,10 @@ class TypewriterApp:
                 if value == "\n":
                     if not self.filename_buffer:
                         self.filename_buffer = self.file_manager.generate_filename()
-                    if not self.filename_buffer.endswith(".txt"):
-                        self.filename_buffer += ".txt"
+                    
+                    default_ext = ".docx" if self.file_manager.has_docx_support() else ".txt"
+                    if not (self.filename_buffer.endswith(".txt") or self.filename_buffer.endswith(".docx")):
+                        self.filename_buffer += default_ext
                     self.file_manager.save_file(self.filename_buffer, "")
                     self.editor.set_document(self.filename_buffer, "")
                     self.state = STATE_EDITOR
