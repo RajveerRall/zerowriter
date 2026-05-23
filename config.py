@@ -18,6 +18,6 @@ AUTOSAVE_INTERVAL_SEC = 10
 DEBOUNCE_DELAY_SEC = 0.15
 
 # UI Layout settings
-WRAP_WIDTH = 42  # Increased from 35 to use more of the screen width
+MAX_TEXT_WIDTH = 380  # Max text width in pixels (leaves 10px margins on both sides of the 400px screen)
 CURSOR_CHAR = "|"  # Static cursor appended to show typing position
 
