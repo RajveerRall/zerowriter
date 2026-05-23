@@ -20,7 +20,7 @@ mkdir -p ~/waveshare-python/e-Paper/RaspberryPi_JetsonNano/python/examples/zerow
 cp main.py ~/waveshare-python/e-Paper/RaspberryPi_JetsonNano/python/examples/
 
 # Copy all python modules to the package directory
-cp zerowriter/*.py ~/waveshare-python/e-Paper/RaspberryPi_JetsonNano/python/examples/zerowriter/
+cp config.py display.py editor.py file_manager.py keyboard.py sync.py __init__.py ~/waveshare-python/e-Paper/RaspberryPi_JetsonNano/python/examples/zerowriter/
 
 # 3. Restart system service
 echo "Restarting Zerowriter service..."
