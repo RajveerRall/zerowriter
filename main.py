@@ -134,7 +134,7 @@ class TypewriterApp:
             if event_type == "key":
                 if value == "y":
                     recovered_text = self.file_manager.read_crash_draft()
-                    new_filename = f"recovered_{int(time.time())}.txt"
+                    new_filename = f"recovered_{int(time.time())}.docx"
                     self.editor.set_document(new_filename, recovered_text)
                     self.file_manager.save_file(new_filename, recovered_text)
                     self.state = STATE_EDITOR
@@ -172,8 +172,8 @@ class TypewriterApp:
                 if value == "\n":
                     if not self.filename_buffer:
                         self.filename_buffer = self.file_manager.generate_filename()
-                    if not self.filename_buffer.endswith(".txt"):
-                        self.filename_buffer += ".txt"
+                    if not self.filename_buffer.endswith(".docx"):
+                        self.filename_buffer += ".docx"
                     self.file_manager.save_file(self.filename_buffer, "")
                     self.editor.set_document(self.filename_buffer, "")
                     self.state = STATE_EDITOR

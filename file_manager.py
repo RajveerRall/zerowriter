@@ -1,33 +1,28 @@
 import os
 import time
-
-try:
-    from docx import Document
-    HAS_DOCX = True
-except ImportError as e:
-    print(f"DEBUG: docx import failed: {e}")
-    HAS_DOCX = False
+import traceback
+from docx import Document
 
 class FileManager:
     def __init__(self, writings_dir, draft_path):
         self.writings_dir = writings_dir
         self.draft_path = draft_path
         os.makedirs(self.writings_dir, exist_ok=True)
+        print(f"[FileManager] Initialized. Writings directory: {self.writings_dir}")
         
     def has_docx_support(self):
-        return HAS_DOCX
+        # Always True as we strictly require docx now
+        return True
 
     def list_files(self):
         try:
-            # List both docx and txt files
-            files = [
-                f for f in os.listdir(self.writings_dir) 
-                if (f.endswith(".docx") or f.endswith(".txt")) and not f.startswith(".")
-            ]
+            # Strictly list .docx files
+            files = [f for f in os.listdir(self.writings_dir) if f.endswith(".docx") and not f.startswith(".")]
             files.sort(key=lambda x: os.path.getmtime(os.path.join(self.writings_dir, x)), reverse=True)
+            print(f"[FileManager] Found {len(files)} .docx files in writings directory.")
             return files
         except Exception as e:
-            print(f"Error scanning directory: {e}")
+            print(f"[FileManager] Error scanning writings directory: {e}")
             return []
 
     def has_crash_draft(self):
@@ -36,54 +31,58 @@ class FileManager:
     def read_crash_draft(self):
         try:
             with open(self.draft_path, 'r') as f:
-                return f.read()
-        except:
+                content = f.read()
+                print(f"[FileManager] Loaded crash draft ({len(content)} characters).")
+                return content
+        except Exception as e:
+            print(f"[FileManager] Error reading crash draft: {e}")
             return ""
 
     def clear_crash_draft(self):
         if os.path.exists(self.draft_path):
             try:
                 os.remove(self.draft_path)
-            except:
-                pass
+                print("[FileManager] Cleared crash draft.")
+            except Exception as e:
+                print(f"[FileManager] Error clearing crash draft: {e}")
 
     def save_crash_draft(self, text):
         try:
             with open(self.draft_path, 'w') as f:
                 f.write(text)
-        except:
-            pass
+        except Exception as e:
+            print(f"[FileManager] Error saving crash draft: {e}")
 
     def load_file(self, filename):
         path = os.path.join(self.writings_dir, filename)
+        print(f"[FileManager] Loading file: {path}")
         try:
-            if HAS_DOCX and filename.endswith(".docx"):
-                doc = Document(path)
-                return "\n".join([p.text for p in doc.paragraphs])
-            else:
-                with open(path, 'r') as f:
-                    return f.read()
+            doc = Document(path)
+            paragraphs = [p.text for p in doc.paragraphs]
+            content = "\n".join(paragraphs)
+            print(f"[FileManager] Successfully loaded {filename} ({len(paragraphs)} paragraphs, {len(content)} characters).")
+            return content
         except Exception as e:
-            print(f"Error reading file {filename}: {e}")
+            print(f"[FileManager] Error loading file {filename}: {e}")
+            traceback.print_exc()
             return ""
 
     def save_file(self, filename, text):
         path = os.path.join(self.writings_dir, filename)
+        print(f"[FileManager] Saving file to: {path}")
         try:
-            if HAS_DOCX and filename.endswith(".docx"):
-                doc = Document()
-                for line in text.split('\n'):
-                    doc.add_paragraph(line)
-                doc.save(path)
-            else:
-                with open(path, 'w') as f:
-                    f.write(text)
+            doc = Document()
+            lines = text.split('\n')
+            for line in lines:
+                doc.add_paragraph(line)
+            doc.save(path)
+            print(f"[FileManager] Successfully saved {filename} ({len(lines)} paragraphs, {len(text)} characters).")
             self.clear_crash_draft()
             return True
         except Exception as e:
-            print(f"Error saving file {filename}: {e}")
+            print(f"[FileManager] Error saving file {filename}: {e}")
+            traceback.print_exc()
             return False
 
     def generate_filename(self):
-        ext = ".docx" if HAS_DOCX else ".txt"
-        return f"draft_{time.strftime('%Y%m%d_%H%M%S')}{ext}"
+        return f"draft_{time.strftime('%Y%m%d_%H%M%S')}.docx"
