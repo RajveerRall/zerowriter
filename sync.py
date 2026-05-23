@@ -6,7 +6,7 @@ class SyncManager:
         self.local_dir = local_dir
         self.status = "local" # local, syncing, synced, failed
         
-    def trigger_sync(self):
+    def trigger_sync(self, on_complete=None):
         if self.status == "syncing":
             return
             
@@ -30,6 +30,12 @@ class SyncManager:
                     self.status = "failed"
             except Exception as e:
                 self.status = "failed"
+                
+            if on_complete:
+                try:
+                    on_complete()
+                except:
+                    pass
                 
         threading.Thread(target=run, daemon=True).start()
         
