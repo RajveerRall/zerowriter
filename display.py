@@ -2,6 +2,7 @@ import os
 import sys
 import textwrap
 from PIL import Image, ImageDraw, ImageFont
+from zerowriter import config
 
 class DisplayHandler:
     def __init__(self, picdir):
@@ -88,10 +89,13 @@ class DisplayHandler:
         img = Image.new('1', (self.width, self.height), 255)
         draw = ImageDraw.Draw(img)
         
-        # Word wrap text
+        # Append the cursor before wrapping so trailing spaces are preserved
+        text_with_cursor = text + config.CURSOR_CHAR
+        
+        # Word wrap text using config wrap width
         lines_to_render = []
-        for paragraph in text.split('\n'):
-            wrapped = textwrap.wrap(paragraph, width=35)
+        for paragraph in text_with_cursor.split('\n'):
+            wrapped = textwrap.wrap(paragraph, width=config.WRAP_WIDTH)
             if not wrapped:
                 lines_to_render.append("")
             else:

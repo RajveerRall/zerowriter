@@ -16,3 +16,8 @@ KEYBOARD_FALLBACK_DEVICE = "/dev/input/event2"
 # Speed/refresh timings
 AUTOSAVE_INTERVAL_SEC = 10
 DEBOUNCE_DELAY_SEC = 0.15
+
+# UI Layout settings
+WRAP_WIDTH = 42  # Increased from 35 to use more of the screen width
+CURSOR_CHAR = "|"  # Static cursor appended to show typing position
+
