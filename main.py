@@ -21,10 +21,12 @@ STATE_MENU = 0
 STATE_RECOVER = 1
 STATE_NEW_FILE = 2
 STATE_EDITOR = 3
+STATE_KEYBOARD_ERROR = 4
 
 class TypewriterApp:
     def __init__(self):
         self.state = STATE_MENU
+        self.prev_state = STATE_MENU
         self.running = True
         self.dirty = True
         self.last_type_time = time.time()
@@ -90,6 +92,8 @@ class TypewriterApp:
                 elif self.state == STATE_EDITOR:
                     sync_indicator = self.sync_manager.get_status_indicator()
                     self.display.render_editor(self.editor.text, sync_indicator)
+                elif self.state == STATE_KEYBOARD_ERROR:
+                    self.display.render_keyboard_error()
                     
                 self.dirty = False
             time.sleep(0.02)
@@ -112,16 +116,43 @@ class TypewriterApp:
         threading.Thread(target=self.autosave_loop, daemon=True).start()
         
         print(f"\n--- ZEROWRITER MODULAR SYSTEM ---")
-        print(f"Reading hardware keyboard: {self.keyboard.device.name}")
+        kbd_name = self.keyboard.device.name if self.keyboard.device else "None"
+        print(f"Reading hardware keyboard: {kbd_name}")
         
-        self.keyboard.grab()
-        
+        if self.keyboard.device:
+            self.keyboard.grab()
+        else:
+            self.prev_state = self.state
+            self.state = STATE_KEYBOARD_ERROR
+            self.dirty = True
+            
         try:
-            for event_type, value in self.keyboard.read_events():
-                if not self.running:
-                    break
-                    
-                self.handle_event(event_type, value)
+            while self.running:
+                if self.state == STATE_KEYBOARD_ERROR:
+                    # Search for keyboard every 2 seconds
+                    time.sleep(2.0)
+                    if self.keyboard.reconnect(config.KEYBOARD_DONGLE_NAME_PART, config.KEYBOARD_FALLBACK_DEVICE):
+                        self.keyboard.grab()
+                        self.state = self.prev_state
+                        self.dirty = True
+                    continue
+
+                try:
+                    for event_type, value in self.keyboard.read_events():
+                        if not self.running:
+                            break
+                        
+                        if event_type == "system" and value == "disconnect":
+                            print("[Main] Keyboard disconnected! Entering error state...")
+                            self.prev_state = self.state
+                            self.state = STATE_KEYBOARD_ERROR
+                            self.dirty = True
+                            break
+                            
+                        self.handle_event(event_type, value)
+                except Exception as loop_err:
+                    print(f"[Main] Error reading events: {loop_err}")
+                    time.sleep(1.0)
         except KeyboardInterrupt:
             pass
         finally:

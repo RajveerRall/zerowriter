@@ -29,90 +29,117 @@ class KeyboardHandler:
         self.caps_lock = False
         
     def _find_keyboard(self, device_name_part, fallback_path):
-        devices = [evdev.InputDevice(path) for path in evdev.list_devices()]
-        for device in devices:
-            name = device.name.lower()
-            if device_name_part in name:
-                if "consumer" not in name and "system" not in name and "mouse" not in name:
-                    return device
-        for device in devices:
-            name = device.name.lower()
-            if "keyboard" in name:
-                if "consumer" not in name and "system" not in name and "mouse" not in name:
-                    return device
-        if os.path.exists(fallback_path):
-            return evdev.InputDevice(fallback_path)
+        try:
+            devices = [evdev.InputDevice(path) for path in evdev.list_devices()]
+            for device in devices:
+                name = device.name.lower()
+                if device_name_part in name:
+                    if "consumer" not in name and "system" not in name and "mouse" not in name:
+                        return device
+            for device in devices:
+                name = device.name.lower()
+                if "keyboard" in name:
+                    if "consumer" not in name and "system" not in name and "mouse" not in name:
+                        return device
+            if os.path.exists(fallback_path):
+                return evdev.InputDevice(fallback_path)
+        except Exception as e:
+            print(f"[KeyboardHandler] Error listing/finding devices: {e}")
         return None
+
+    def reconnect(self, device_name_part, fallback_path):
+        print(f"[KeyboardHandler] Scanning for keyboards...")
+        try:
+            device = self._find_keyboard(device_name_part, fallback_path)
+            if device:
+                self.device = device
+                # Reset states
+                self.shift_pressed = False
+                self.ctrl_pressed = False
+                self.caps_lock = False
+                print(f"[KeyboardHandler] Connected to keyboard: {device.path} ({device.name})")
+                return True
+        except Exception as e:
+            print(f"[KeyboardHandler] Reconnection failed: {e}")
+        return False
 
     def grab(self):
         if self.device:
             try:
                 self.device.grab()
+                print(f"[KeyboardHandler] Grabbed keyboard: {self.device.path}")
             except Exception as e:
-                print(f"Could not grab keyboard: {e}")
+                print(f"[KeyboardHandler] Could not grab keyboard: {e}")
 
     def ungrab(self):
         if self.device:
             try:
                 self.device.ungrab()
-            except:
-                pass
+                print(f"[KeyboardHandler] Ungrabbed keyboard: {self.device.path}")
+            except Exception as e:
+                print(f"[KeyboardHandler] Could not ungrab keyboard: {e}")
 
     def read_events(self):
         if not self.device:
+            yield ("system", "disconnect")
             return
             
-        for event in self.device.read_loop():
-            if event.type == ecodes.EV_KEY:
-                key_event = categorize(event)
-                keycode = key_event.keycode
-                
-                if isinstance(keycode, list):
-                    if len(keycode) > 0:
-                        keycode = keycode[0]
-                    else:
-                        continue
-                
-                # Key press (1) or hold (2)
-                if key_event.keystate in (1, 2):
-                    # Skip repeating modifier keystates
-                    if key_event.keystate == 2 and keycode in ('KEY_LEFTSHIFT', 'KEY_RIGHTSHIFT', 'KEY_LEFTCTRL', 'KEY_RIGHTCTRL'):
-                        continue
-                        
-                    if keycode in ('KEY_LEFTSHIFT', 'KEY_RIGHTSHIFT'):
-                        self.shift_pressed = True
-                    elif keycode in ('KEY_LEFTCTRL', 'KEY_RIGHTCTRL'):
-                        self.ctrl_pressed = True
-                    elif keycode == 'KEY_CAPSLOCK' and key_event.keystate == 1:
-                        self.caps_lock = not self.caps_lock
-                    elif keycode == 'KEY_ENTER':
-                        yield ("key", "\n")
-                    elif keycode == 'KEY_BACKSPACE':
-                        yield ("key", "backspace")
-                    elif keycode == 'KEY_UP':
-                        yield ("key", "up")
-                    elif keycode == 'KEY_DOWN':
-                        yield ("key", "down")
-                    elif keycode == 'KEY_Y' and not self.ctrl_pressed:
-                        yield ("key", "y")
-                    elif keycode == 'KEY_N' and not self.ctrl_pressed:
-                        yield ("key", "n")
-                    elif keycode in KEY_MAP:
-                        char_normal, char_shift = KEY_MAP[keycode]
-                        use_upper = self.shift_pressed
-                        if keycode.startswith('KEY_') and keycode[4:].isalpha():
-                            if self.caps_lock:
-                                use_upper = not use_upper
-                        char = char_shift if use_upper else char_normal
-                        
-                        if self.ctrl_pressed:
-                            yield ("shortcut", char.lower())
+        try:
+            for event in self.device.read_loop():
+                if event.type == ecodes.EV_KEY:
+                    key_event = categorize(event)
+                    keycode = key_event.keycode
+                    
+                    if isinstance(keycode, list):
+                        if len(keycode) > 0:
+                            keycode = keycode[0]
                         else:
-                            yield ("key", char)
+                            continue
+                    
+                    # Key press (1) or hold (2)
+                    if key_event.keystate in (1, 2):
+                        # Skip repeating modifier keystates
+                        if key_event.keystate == 2 and keycode in ('KEY_LEFTSHIFT', 'KEY_RIGHTSHIFT', 'KEY_LEFTCTRL', 'KEY_RIGHTCTRL'):
+                            continue
                             
-                # Key release (0)
-                elif key_event.keystate == 0:
-                    if keycode in ('KEY_LEFTSHIFT', 'KEY_RIGHTSHIFT'):
-                        self.shift_pressed = False
-                    elif keycode in ('KEY_LEFTCTRL', 'KEY_RIGHTCTRL'):
-                        self.ctrl_pressed = False
+                        if keycode in ('KEY_LEFTSHIFT', 'KEY_RIGHTSHIFT'):
+                            self.shift_pressed = True
+                        elif keycode in ('KEY_LEFTCTRL', 'KEY_RIGHTCTRL'):
+                            self.ctrl_pressed = True
+                        elif keycode == 'KEY_CAPSLOCK' and key_event.keystate == 1:
+                            self.caps_lock = not self.caps_lock
+                        elif keycode == 'KEY_ENTER':
+                            yield ("key", "\n")
+                        elif keycode == 'KEY_BACKSPACE':
+                            yield ("key", "backspace")
+                        elif keycode == 'KEY_UP':
+                            yield ("key", "up")
+                        elif keycode == 'KEY_DOWN':
+                            yield ("key", "down")
+                        elif keycode == 'KEY_Y' and not self.ctrl_pressed:
+                            yield ("key", "y")
+                        elif keycode == 'KEY_N' and not self.ctrl_pressed:
+                            yield ("key", "n")
+                        elif keycode in KEY_MAP:
+                            char_normal, char_shift = KEY_MAP[keycode]
+                            use_upper = self.shift_pressed
+                            if keycode.startswith('KEY_') and keycode[4:].isalpha():
+                                if self.caps_lock:
+                                    use_upper = not use_upper
+                            char = char_shift if use_upper else char_normal
+                            
+                            if self.ctrl_pressed:
+                                yield ("shortcut", char.lower())
+                            else:
+                                yield ("key", char)
+                                
+                    # Key release (0)
+                    elif key_event.keystate == 0:
+                        if keycode in ('KEY_LEFTSHIFT', 'KEY_RIGHTSHIFT'):
+                            self.shift_pressed = False
+                        elif keycode in ('KEY_LEFTCTRL', 'KEY_RIGHTCTRL'):
+                            self.ctrl_pressed = False
+        except OSError as e:
+            print(f"[KeyboardHandler] Connection lost: {e}")
+            self.device = None
+            yield ("system", "disconnect")
