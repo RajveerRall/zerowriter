@@ -31,16 +31,34 @@ class KeyboardHandler:
     def _find_keyboard(self, device_name_part, fallback_path):
         try:
             devices = [evdev.InputDevice(path) for path in evdev.list_devices()]
+            
+            # Helper to verify if device is a real typing keyboard by checking if it supports KEY_A (code 30)
+            def is_real_keyboard(dev):
+                try:
+                    caps = dev.capabilities()
+                    if evdev.ecodes.EV_KEY in caps:
+                        return 30 in caps[evdev.ecodes.EV_KEY]
+                except:
+                    pass
+                return False
+
+            # First pass: Preferred device name part + is a real keyboard
             for device in devices:
                 name = device.name.lower()
-                if device_name_part in name:
-                    if "consumer" not in name and "system" not in name and "mouse" not in name:
-                        return device
+                if device_name_part in name and is_real_keyboard(device):
+                    return device
+            
+            # Second pass: Any device with "keyboard" in its name + is a real keyboard
             for device in devices:
                 name = device.name.lower()
-                if "keyboard" in name:
-                    if "consumer" not in name and "system" not in name and "mouse" not in name:
-                        return device
+                if "keyboard" in name and is_real_keyboard(device):
+                    return device
+                    
+            # Third pass: Any device that is a real typing keyboard regardless of name
+            for device in devices:
+                if is_real_keyboard(device):
+                    return device
+                    
             if os.path.exists(fallback_path):
                 return evdev.InputDevice(fallback_path)
         except Exception as e:
