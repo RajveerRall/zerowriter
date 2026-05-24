@@ -42,19 +42,43 @@ class KeyboardHandler:
                     pass
                 return False
 
-            # First pass: Preferred device name part + is a real keyboard
+            # Helper to verify if device is interface 0 (primary USB interface)
+            def is_interface_0(dev):
+                try:
+                    return dev.phys and "input0" in dev.phys.lower()
+                except:
+                    return False
+
+            # Pass 1: Preferred device name part + is a real keyboard + interface 0
+            for device in devices:
+                name = device.name.lower()
+                if device_name_part in name and is_real_keyboard(device) and is_interface_0(device):
+                    return device
+            
+            # Pass 2: Preferred device name part + is a real keyboard (any interface)
             for device in devices:
                 name = device.name.lower()
                 if device_name_part in name and is_real_keyboard(device):
                     return device
             
-            # Second pass: Any device with "keyboard" in its name + is a real keyboard
+            # Pass 3: Any device with "keyboard" in its name + is a real keyboard + interface 0
+            for device in devices:
+                name = device.name.lower()
+                if "keyboard" in name and is_real_keyboard(device) and is_interface_0(device):
+                    return device
+            
+            # Pass 4: Any device with "keyboard" in its name + is a real keyboard (any interface)
             for device in devices:
                 name = device.name.lower()
                 if "keyboard" in name and is_real_keyboard(device):
                     return device
                     
-            # Third pass: Any device that is a real typing keyboard regardless of name
+            # Pass 5: Any device that is a real typing keyboard + interface 0
+            for device in devices:
+                if is_real_keyboard(device) and is_interface_0(device):
+                    return device
+                    
+            # Pass 6: Any device that is a real typing keyboard (any interface)
             for device in devices:
                 if is_real_keyboard(device):
                     return device
