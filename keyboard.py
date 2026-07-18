@@ -158,6 +158,16 @@ class KeyboardHandler:
                             yield ("key", "up")
                         elif keycode == 'KEY_DOWN':
                             yield ("key", "down")
+                        elif keycode == 'KEY_LEFT':
+                            yield ("key", "left")
+                        elif keycode == 'KEY_RIGHT':
+                            yield ("key", "right")
+                        elif keycode == 'KEY_DELETE':
+                            yield ("key", "delete")
+                        elif keycode == 'KEY_HOME':
+                            yield ("key", "home")
+                        elif keycode == 'KEY_END':
+                            yield ("key", "end")
                         elif keycode == 'KEY_Y' and not self.ctrl_pressed:
                             yield ("key", "y")
                         elif keycode == 'KEY_N' and not self.ctrl_pressed:

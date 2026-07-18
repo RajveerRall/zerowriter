@@ -16,6 +16,7 @@ KEYBOARD_FALLBACK_DEVICE = "/dev/input/event2"
 # Speed/refresh timings
 AUTOSAVE_INTERVAL_SEC = 10
 DEBOUNCE_DELAY_SEC = 0.15
+THROTTLE_DELAY_SEC = 0.3
 
 # UI Layout settings
 MAX_TEXT_WIDTH = 380  # Max text width in pixels (leaves 10px margins on both sides of the 400px screen)

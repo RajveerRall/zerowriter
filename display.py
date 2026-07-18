@@ -129,12 +129,12 @@ class DisplayHandler:
                 lines.append(' '.join(current_line))
         return lines
 
-    def render_editor(self, text, sync_indicator):
+    def render_editor(self, text, cursor_idx, sync_indicator, full_refresh=False):
         img = Image.new('1', (self.width, self.height), 255)
         draw = ImageDraw.Draw(img)
         
-        # Append the cursor before wrapping so trailing spaces are preserved
-        text_with_cursor = text + config.CURSOR_CHAR
+        # Insert the cursor at the correct position before wrapping so trailing spaces/cursor are handled
+        text_with_cursor = text[:cursor_idx] + config.CURSOR_CHAR + text[cursor_idx:]
         
         # Wrap text by pixels using the configured maximum pixel width
         lines_to_render = self._wrap_text_pixels(text_with_cursor, self.font, config.MAX_TEXT_WIDTH)
@@ -149,7 +149,8 @@ class DisplayHandler:
         words_count = len(text.split())
         status_text = f"Ctrl+Q: Menu | Ctrl+S: Save ({sync_indicator}) | Words: {words_count}"
         draw.text((10, 280), status_text, font=self.status_font, fill=0)
-        self.update(img)
+        self.update(img, full_refresh=full_refresh)
+        return img
 
     def update(self, img, full_refresh=False):
         if not self.epd:

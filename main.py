@@ -71,31 +71,36 @@ class TypewriterApp:
                     last_saved_text = current_text
 
     def render_loop(self):
+        last_render_time = 0
         while self.running:
             should_render = False
+            now = time.time()
             
-            # Debounce rendering when in editor state
             if self.state == STATE_EDITOR:
-                if self.dirty and (time.time() - self.last_type_time > config.DEBOUNCE_DELAY_SEC):
+                # Render if dirty AND (either throttled interval passed OR user paused typing)
+                if self.dirty and (
+                    (now - last_render_time >= config.THROTTLE_DELAY_SEC) or
+                    (now - self.last_type_time >= config.DEBOUNCE_DELAY_SEC)
+                ):
                     should_render = True
             else:
                 if self.dirty:
                     should_render = True
                     
             if should_render:
-                if self.state == STATE_RECOVER:
+                self.dirty = False
+                if self.state == STATE_EDITOR:
+                    last_render_time = now
+                    sync_indicator = self.sync_manager.get_status_indicator()
+                    self.display.render_editor(self.editor.text, self.editor.cursor_idx, sync_indicator)
+                elif self.state == STATE_RECOVER:
                     self.display.render_recovery()
                 elif self.state == STATE_MENU:
                     self.display.render_menu(self.menu_items, self.selected_idx)
                 elif self.state == STATE_NEW_FILE:
                     self.display.render_new_file(self.filename_buffer)
-                elif self.state == STATE_EDITOR:
-                    sync_indicator = self.sync_manager.get_status_indicator()
-                    self.display.render_editor(self.editor.text, sync_indicator)
                 elif self.state == STATE_KEYBOARD_ERROR:
                     self.display.render_keyboard_error()
-                    
-                self.dirty = False
             time.sleep(0.02)
 
     def on_sync_complete(self):
@@ -236,20 +241,45 @@ class TypewriterApp:
                     self.dirty = True
                     self.last_type_time = 0 # Force immediate render to show synced status
                 elif value == "r": # Ctrl+R to full refresh
-                    self.display.update(self.display.render_editor(self.editor.text, self.sync_manager.get_status_indicator()), full_refresh=True)
+                    self.display.render_editor(self.editor.text, self.editor.cursor_idx, self.sync_manager.get_status_indicator(), full_refresh=True)
             elif event_type == "key":
                 if value == "backspace":
                     if self.editor.backspace():
                         self.dirty = True
                         self.last_type_time = time.time()
+                elif value == "delete":
+                    if self.editor.delete():
+                        self.dirty = True
+                        self.last_type_time = time.time()
+                elif value == "left":
+                    if self.editor.move_cursor_left():
+                        self.dirty = True
+                        self.last_type_time = time.time()
+                elif value == "right":
+                    if self.editor.move_cursor_right():
+                        self.dirty = True
+                        self.last_type_time = time.time()
+                elif value == "home":
+                    self.editor.cursor_idx = 0
+                    self.dirty = True
+                    self.last_type_time = time.time()
+                elif value == "end":
+                    self.editor.cursor_idx = len(self.editor.text)
+                    self.dirty = True
+                    self.last_type_time = time.time()
                 elif value == "\n":
                     self.editor.append_char("\n")
                     self.dirty = True
                     self.last_type_time = time.time()
+                elif value in ("up", "down"):
+                    # Ignore up/down arrows in editor to avoid appending "up"/"down" text
+                    pass
                 else:
-                    self.editor.append_char(value)
-                    self.dirty = True
-                    self.last_type_time = time.time()
+                    # Only append characters of length 1 (normal typing keys)
+                    if len(value) == 1:
+                        self.editor.append_char(value)
+                        self.dirty = True
+                        self.last_type_time = time.time()
 
 if __name__ == "__main__":
     app = TypewriterApp()
