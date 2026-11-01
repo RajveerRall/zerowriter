@@ -42,6 +42,30 @@ class DisplayHandler:
             self.status_font = ImageFont.load_default()
             self.title_font = ImageFont.load_default()
 
+        # Load monospace font for Linux Terminal mode
+        mono_candidates = [
+            "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
+            "/usr/share/fonts/truetype/freefont/FreeMono.ttf",
+            os.path.join(self.picdir, 'Font.ttc')
+        ]
+        self.mono_font = None
+        for path in mono_candidates:
+            if os.path.exists(path):
+                try:
+                    self.mono_font = ImageFont.truetype(path, 13)
+                    break
+                except Exception:
+                    continue
+        if not self.mono_font:
+            self.mono_font = ImageFont.load_default()
+
+        # Calculate character grid size for 400x300 screen
+        test_bbox = self.mono_font.getbbox("M") if hasattr(self.mono_font, "getbbox") else (0, 0, 8, 14)
+        self.char_width = max(6, test_bbox[2] - test_bbox[0])
+        self.char_height = max(12, test_bbox[3] - test_bbox[1] + 2)
+        self.term_cols = (self.width - 10) // self.char_width
+        self.term_rows = 270 // self.char_height
+
     def render_menu(self, menu_items, selected_idx):
         img = Image.new('1', (self.width, self.height), 255)
         draw = ImageDraw.Draw(img)
@@ -148,6 +172,29 @@ class DisplayHandler:
         draw.line((0, 275, self.width, 275), fill=0)
         words_count = len(text.split())
         status_text = f"Ctrl+Q: Menu | Ctrl+S: Save ({sync_indicator}) | Words: {words_count}"
+        draw.text((10, 280), status_text, font=self.status_font, fill=0)
+        self.update(img, full_refresh=full_refresh)
+        return img
+
+    def render_terminal(self, screen_lines, cursor_pos=(0, 0), status_text="[Linux Terminal] Type 'exit' to return | Ctrl+R: Refresh", full_refresh=False):
+        img = Image.new('1', (self.width, self.height), 255)
+        draw = ImageDraw.Draw(img)
+
+        # Draw terminal lines
+        y = 5
+        for line in screen_lines[:self.term_rows]:
+            draw.text((5, y), line, font=self.mono_font, fill=0)
+            y += self.char_height
+
+        # Draw cursor
+        cur_x, cur_y = cursor_pos
+        if 0 <= cur_y < self.term_rows and 0 <= cur_x < self.term_cols:
+            cx = 5 + (cur_x * self.char_width)
+            cy = 5 + (cur_y * self.char_height)
+            draw.line((cx, cy + self.char_height - 2, cx + self.char_width - 1, cy + self.char_height - 2), fill=0, width=2)
+
+        # Status bar
+        draw.line((0, 275, self.width, 275), fill=0)
         draw.text((10, 280), status_text, font=self.status_font, fill=0)
         self.update(img, full_refresh=full_refresh)
         return img

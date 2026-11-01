@@ -152,6 +152,10 @@ class KeyboardHandler:
                             self.caps_lock = not self.caps_lock
                         elif keycode == 'KEY_ENTER':
                             yield ("key", "\n")
+                        elif keycode == 'KEY_TAB':
+                            yield ("key", "\t")
+                        elif keycode == 'KEY_ESC':
+                            yield ("key", "esc")
                         elif keycode == 'KEY_BACKSPACE':
                             yield ("key", "backspace")
                         elif keycode == 'KEY_UP':

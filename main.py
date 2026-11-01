@@ -15,6 +15,7 @@ from zerowriter.display import DisplayHandler
 from zerowriter.file_manager import FileManager
 from zerowriter.sync import SyncManager
 from zerowriter.editor import EditorState
+from zerowriter.terminal import TerminalSession
 
 # State constants
 STATE_MENU = 0
@@ -22,6 +23,7 @@ STATE_RECOVER = 1
 STATE_NEW_FILE = 2
 STATE_EDITOR = 3
 STATE_KEYBOARD_ERROR = 4
+STATE_TERMINAL = 5
 
 class TypewriterApp:
     def __init__(self):
@@ -31,6 +33,7 @@ class TypewriterApp:
         self.dirty = True
         self.last_type_time = time.time()
         self.full_refresh_needed = False
+        self.terminal_session = None
         
         # Sub-managers
         self.keyboard = KeyboardHandler(
@@ -56,7 +59,7 @@ class TypewriterApp:
             sys.exit(1)
             
     def update_menu(self):
-        self.menu_items = ["[ New Document ]"]
+        self.menu_items = ["[ New Document ]", "[ Linux Terminal ]"]
         self.menu_items.extend(self.file_manager.list_files())
         self.selected_idx = 0
 
@@ -83,6 +86,16 @@ class TypewriterApp:
                     (now - self.last_type_time >= config.DEBOUNCE_DELAY_SEC)
                 ):
                     should_render = True
+            elif self.state == STATE_TERMINAL:
+                if self.terminal_session:
+                    if not self.terminal_session.running:
+                        self.state = STATE_MENU
+                        self.update_menu()
+                        self.dirty = True
+                        self.full_refresh_needed = True
+                        should_render = True
+                    elif (self.dirty or self.terminal_session.dirty) and (now - last_render_time >= 0.08):
+                        should_render = True
             else:
                 if self.dirty:
                     should_render = True
@@ -93,6 +106,11 @@ class TypewriterApp:
                     last_render_time = now
                     sync_indicator = self.sync_manager.get_status_indicator()
                     self.display.render_editor(self.editor.text, self.editor.cursor_idx, sync_indicator)
+                elif self.state == STATE_TERMINAL:
+                    last_render_time = now
+                    if self.terminal_session and self.terminal_session.running:
+                        self.terminal_session.render(full_refresh=self.full_refresh_needed)
+                        self.full_refresh_needed = False
                 elif self.state == STATE_RECOVER:
                     self.display.render_recovery()
                 elif self.state == STATE_MENU:
@@ -190,19 +208,43 @@ class TypewriterApp:
                     self.selected_idx = min(len(self.menu_items) - 1, self.selected_idx + 1)
                     self.dirty = True
                 elif value == "\n":
-                    if self.selected_idx == 0:
+                    selected = self.menu_items[self.selected_idx]
+                    if selected == "[ New Document ]":
                         self.state = STATE_NEW_FILE
                         self.filename_buffer = ""
+                        self.dirty = True
+                    elif selected == "[ Linux Terminal ]":
+                        self.terminal_session = TerminalSession(self.display, self.keyboard)
+                        if self.terminal_session.start_shell():
+                            self.state = STATE_TERMINAL
+                            self.dirty = True
+                            self.full_refresh_needed = True
+                        else:
+                            print("[Main] Failed to start terminal session.")
                     else:
-                        filename = self.menu_items[self.selected_idx]
+                        filename = selected
                         loaded_text = self.file_manager.load_file(filename)
                         self.editor.set_document(filename, loaded_text)
                         self.state = STATE_EDITOR
-                    self.dirty = True
+                        self.dirty = True
             elif event_type == "shortcut":
                 if value == "q":
                     self.running = False
                     
+        elif self.state == STATE_TERMINAL:
+            if self.terminal_session and self.terminal_session.running:
+                self.terminal_session.handle_key(event_type, value)
+                if not self.terminal_session.running:
+                    self.state = STATE_MENU
+                    self.update_menu()
+                    self.dirty = True
+                    self.full_refresh_needed = True
+            else:
+                self.state = STATE_MENU
+                self.update_menu()
+                self.dirty = True
+                self.full_refresh_needed = True
+
         elif self.state == STATE_NEW_FILE:
             if event_type == "key":
                 if value == "\n":

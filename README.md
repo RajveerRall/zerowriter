@@ -8,6 +8,7 @@ A clean, modular writing application for Raspberry Pi Zero and the Waveshare 4.2
 
 ```
 ├── main.py                     # Entry point orchestrating the app loop
+├── terminal.py                 # Integrated Linux bash terminal emulator for E-Ink
 ├── deploy.sh                   # Automated pull, copy, and restart script
 ├── README.md                   # Installation & configuration guide
 └── zerowriter/
@@ -17,7 +18,8 @@ A clean, modular writing application for Raspberry Pi Zero and the Waveshare 4.2
     ├── editor.py               # Business logic tracking active document text
     ├── file_manager.py         # File load/save/autosave recovery mechanics (.docx only)
     ├── keyboard.py             # Event hook mapping hardware keys to actions
-    └── sync.py                 # Asynchronous background thread executing Rclone syncs
+    ├── sync.py                 # Asynchronous background thread executing Rclone syncs
+    └── terminal.py             # Interactive bash terminal session logic
 ```
 
 ---
@@ -25,10 +27,10 @@ A clean, modular writing application for Raspberry Pi Zero and the Waveshare 4.2
 ## Installation on the Raspberry Pi
 
 ### 1. Install Dependencies
-Run these commands to install event-handling, word document processing, and cloud sync tools:
+Run these commands to install event-handling, word document processing, terminal emulation, and cloud sync tools:
 ```bash
 sudo apt update
-sudo apt install -y python3-evdev python3-docx rclone
+sudo apt install -y python3-evdev python3-docx python3-pyte rclone
 ```
 
 ### 2. Position the Files & Deploy
@@ -84,12 +86,32 @@ Run the application as administrator (required for hardware keyboard monitoring)
 sudo python3 main.py
 ```
 
-### Key Controls
-* **Menu Browsing:** Use the `Up/Down Arrow` keys, press `Enter` to open/create a file.
+### Key Controls (Typewriter)
+* **Menu Browsing:** Use the `Up/Down Arrow` keys, press `Enter` to open a file or launch the terminal.
 * **Typing Mode:** Regular typing updates the screen automatically when you pause typing for more than `0.15` seconds.
 * **Ctrl + S:** Manually save the document as `.docx` and trigger an asynchronous background sync to Google Drive.
 * **Ctrl + Q:** Save your progress, clean up temporary drafts, trigger a final background sync, and return to the main File Manager Menu.
 * **Ctrl + R:** Force a full screen refresh to clear any e-ink ghosting artifacts.
+
+---
+
+## Linux Terminal on E-Ink
+
+You can launch a full Linux bash terminal directly on the E-Ink display!
+
+### How to Access:
+1. **From Zerowriter Menu:** Select `[ Linux Terminal ]` and press `Enter`.
+2. **Standalone:** You can also launch the terminal independently:
+   ```bash
+   sudo python3 terminal.py
+   ```
+
+### Terminal Controls:
+* **Run commands:** Run any normal Linux command (`ls`, `git`, `python3`, `nano`, `ping`, etc.).
+* **Tab:** Auto-completes file paths and commands.
+* **Ctrl + R:** Triggers a full screen refresh on the E-Ink screen to scrub ghosting and clean the terminal view.
+* **Ctrl + C:** Interrupts or cancels a running command.
+* **Exit Terminal:** Type `exit` or press `Ctrl + D` to return cleanly to the Zerowriter document menu.
 
 ---
 

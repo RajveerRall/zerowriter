@@ -16,11 +16,11 @@ echo "Copying application files..."
 # Ensure the examples subdirectory exists
 mkdir -p ~/waveshare-python/e-Paper/RaspberryPi_JetsonNano/python/examples/zerowriter
 
-# Copy main.py to examples root
-cp main.py ~/waveshare-python/e-Paper/RaspberryPi_JetsonNano/python/examples/
+# Copy main.py and terminal.py to examples root
+cp main.py terminal.py ~/waveshare-python/e-Paper/RaspberryPi_JetsonNano/python/examples/
 
 # Copy all python modules to the package directory
-cp config.py display.py editor.py file_manager.py keyboard.py sync.py __init__.py ~/waveshare-python/e-Paper/RaspberryPi_JetsonNano/python/examples/zerowriter/
+cp config.py display.py editor.py file_manager.py keyboard.py sync.py terminal.py __init__.py ~/waveshare-python/e-Paper/RaspberryPi_JetsonNano/python/examples/zerowriter/
 
 # 3. Restart system service
 echo "Restarting Zerowriter service..."
