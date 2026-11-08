@@ -105,7 +105,8 @@ class TypewriterApp:
                 if self.state == STATE_EDITOR:
                     last_render_time = now
                     sync_indicator = self.sync_manager.get_status_indicator()
-                    self.display.render_editor(self.editor.text, self.editor.cursor_idx, sync_indicator)
+                    self.display.render_editor(self.editor.text, self.editor.cursor_idx, sync_indicator, full_refresh=self.full_refresh_needed)
+                    self.full_refresh_needed = False
                 elif self.state == STATE_TERMINAL:
                     last_render_time = now
                     if self.terminal_session and self.terminal_session.running:
@@ -283,7 +284,8 @@ class TypewriterApp:
                     self.dirty = True
                     self.last_type_time = 0 # Force immediate render to show synced status
                 elif value == "r": # Ctrl+R to full refresh
-                    self.display.render_editor(self.editor.text, self.editor.cursor_idx, self.sync_manager.get_status_indicator(), full_refresh=True)
+                    self.full_refresh_needed = True
+                    self.dirty = True
             elif event_type == "key":
                 if value == "backspace":
                     if self.editor.backspace():

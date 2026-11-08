@@ -1,5 +1,6 @@
 import os
 import sys
+import threading
 import textwrap
 from PIL import Image, ImageDraw, ImageFont
 from zerowriter import config
@@ -8,6 +9,7 @@ class DisplayHandler:
     def __init__(self, picdir):
         self.epd = None
         self.picdir = picdir
+        self.epd_lock = threading.Lock()
         self.font = None
         self.status_font = None
         self.title_font = None
@@ -160,8 +162,21 @@ class DisplayHandler:
         # Insert the cursor at the correct position before wrapping so trailing spaces/cursor are handled
         text_with_cursor = text[:cursor_idx] + config.CURSOR_CHAR + text[cursor_idx:]
         
+        # Performance optimization: On Pi Zero, avoid re-measuring thousands of previous words.
+        # 11 display lines need at most ~500 chars; 1500 chars guarantees all visible lines.
+        if len(text_with_cursor) > 1500:
+            tail = text_with_cursor[-1500:]
+            first_break = tail.find('\n')
+            if first_break != -1 and first_break < 400:
+                text_to_wrap = tail[first_break + 1:]
+            else:
+                first_space = tail.find(' ')
+                text_to_wrap = tail[first_space + 1:] if first_space != -1 else tail
+        else:
+            text_to_wrap = text_with_cursor
+
         # Wrap text by pixels using the configured maximum pixel width
-        lines_to_render = self._wrap_text_pixels(text_with_cursor, self.font, config.MAX_TEXT_WIDTH)
+        lines_to_render = self._wrap_text_pixels(text_to_wrap, self.font, config.MAX_TEXT_WIDTH)
                 
         y = 10
         for line in lines_to_render[-11:]:
@@ -202,23 +217,25 @@ class DisplayHandler:
     def update(self, img, full_refresh=False):
         if not self.epd:
             return
-        try:
-            if full_refresh:
-                self.epd.init()
-                self.epd.display(self.epd.getbuffer(img))
-                self.epd.init_fast(self.epd.Seconds_1_5S)
-            else:
-                self.epd.display_Partial(self.epd.getbuffer(img))
-        except Exception as e:
-            print(f"Error updating display: {e}")
+        with self.epd_lock:
+            try:
+                if full_refresh:
+                    self.epd.init()
+                    self.epd.display(self.epd.getbuffer(img))
+                    self.epd.init_fast(self.epd.Seconds_1_5S)
+                else:
+                    self.epd.display_Partial(self.epd.getbuffer(img))
+            except Exception as e:
+                print(f"Error updating display: {e}")
 
     def shutdown(self):
         if not self.epd:
             return
         print("Clearing display and putting it to sleep...")
-        try:
-            self.epd.init()
-            self.epd.Clear()
-            self.epd.sleep()
-        except Exception as e:
-            print(f"Error shutting down display: {e}")
+        with self.epd_lock:
+            try:
+                self.epd.init()
+                self.epd.Clear()
+                self.epd.sleep()
+            except Exception as e:
+                print(f"Error shutting down display: {e}")

@@ -18,6 +18,7 @@ class SyncManager:
                 # Explicitly point to the user's rclone config since python runs as root (sudo)
                 config_path = "/home/user/.config/rclone/rclone.conf"
                 cmd = [
+                    "nice", "-n", "15",
                     "rclone", 
                     "--config", config_path, 
                     "sync", 
@@ -26,7 +27,7 @@ class SyncManager:
                     "--exclude", ".*"
                 ]
                 print(f"[SyncManager] Running command: {' '.join(cmd)}")
-                result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+                result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=30)
                 
                 print(f"[SyncManager] Rclone process completed with returncode: {result.returncode}")
                 if result.stdout:
